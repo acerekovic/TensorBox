@@ -1,4 +1,4 @@
-#A tool for hand labelling images
+#A tool for handling labelling images
 #Generates an IDL file
 #pass in the directory where you store your images and a filename, then select the points on the images
 #every time you hit next a line is generated
@@ -41,7 +41,7 @@ def next(event):  #called when the next button is hit
             line.append(';' + "\n")
     text_line = ''.join(line)
     outfile.write(text_line)
-    print "writing line : " + text_line
+    print ("writing line : " + text_line)
     top_corners[:] = []
     bottom_corners[:] = []
     removeAllPatches()
@@ -69,7 +69,7 @@ ax = plt.gca()
 
 #get our files for processing
 if len(sys.argv) < 3:
-    print "Too few params, try something like:  python make_idl.py train640x480 train.idl"
+    print ("Too few params, try something like:  python make_idl.py train640x480 train.idl")
     exit()
 path = sys.argv[1]
 outfile_name = sys.argv[2]
@@ -95,4 +95,4 @@ plt.show()
 
 outfile.close()
 
-print "finished"
+print ("finished")

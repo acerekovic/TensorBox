@@ -16,12 +16,13 @@ import argparse
 import os
 import tensorflow as tf
 import numpy as np
-from tensorflow.models.rnn import rnn_cell
+
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import array_ops
 
-random.seed(0)
-np.random.seed(0)
+from utils.data_utils import (annotation_jitter, annotation_to_h5)
+from utils.annolist import AnnotationLib as al
+from utils.rect import Rect
 
 from utils import train_utils
 from utils import googlenet_load
@@ -30,9 +31,9 @@ def build_lstm_inner(lstm_input, H):
     '''
     build lstm decoder
     '''
-    lstm_cell = rnn_cell.BasicLSTMCell(H['arch']['lstm_size'], forget_bias=0.0)
+    lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(H['arch']['lstm_size'], forget_bias=0.0)
     if H['arch']['num_lstm_layers'] > 1:
-        lstm = rnn_cell.MultiRNNCell([lstm_cell] * H['arch']['num_lstm_layers'])
+        lstm = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * H['arch']['num_lstm_layers'])
     else:
         lstm = lstm_cell
 
@@ -515,7 +516,7 @@ def train(H, test_images):
         for phase in ['train', 'test']:
             # enqueue once manually to avoid thread start delay
             gen = train_utils.load_data_gen(H, phase, jitter=H['solver']['use_jitter'])
-            d = gen.next()
+            d = next(gen)
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
             threads.append(tf.train.threading.Thread(target=my_loop,
                                                      args=(coord, sess, enqueue_op, phase, gen)))
@@ -531,8 +532,8 @@ def train(H, test_images):
 
         # train model for N iterations
         start = time.time()
-        max_iter = H['solver'].get('max_iter', 10000000)
-        for i in xrange(max_iter):
+        max_iter = H['solver'].get('max_iter', 100000) # #of iterations
+        for i in range(max_iter):
             if coord.should_stop():
                 break
             display_iter = H['logging']['display_iter']
@@ -570,13 +571,7 @@ def train(H, test_images):
                     test_image_summary_str = sess.run(log_image, feed_dict=feed)
                     writer.add_summary(test_image_summary_str, global_step=global_step.eval())
                 writer.add_summary(summary_str, global_step=global_step.eval())
-                print_str = string.join([
-                    'Step: %d',
-                    'lr: %f',
-                    'Train Loss: %.2f',
-                    'Test Accuracy: %.1f%%',
-                    'Time/image (ms): %.1f'
-                ], ', ')
+                print_str = 'Step: %d, lr: %f, Train Loss: %.2f, Test Accuracy: %.1f%%, Time/image(ms): %.1f '
                 print(print_str %
                       (i, adjusted_lr, batch_loss_train,
                        test_accuracy * 100, dt * 1000 if i > 0 else 0))

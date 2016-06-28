@@ -4,20 +4,19 @@ import json
 import subprocess
 from scipy.misc import imread, imresize
 from scipy import misc
-
+import numpy as np
 from train import build_forward_backward
 from utils import googlenet_load
 from utils.annolist import AnnotationLib as al
 from utils.train_utils import add_rectangles, rescale_boxes
+from utils.rect import Rect
 
 import cv2
 import argparse
 
 
 def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.5, tau=0.25):
-    from utils.rect import Rect
-    from utils.stitch_wrapper import stitch_rects
-    import numpy as np
+
     image = np.copy(orig_image[0])
     boxes_r = np.reshape(boxes, (-1,
                                  arch["grid_height"],
@@ -44,6 +43,7 @@ def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False,
                 all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
 
     if use_stitching:
+        from utils.stitch_wrapper import stitch_rects
         acc_rects = stitch_rects(all_rects, tau)
     else:
         acc_rects = [r for row in all_rects for cell in row for r in cell if r.confidence > 0.1]
